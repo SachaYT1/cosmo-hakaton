@@ -4,10 +4,16 @@ import json
 
 import geopandas as gpd
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from shapely.geometry import box, shape
 from shapely.geometry.base import BaseGeometry
 
+from app.exports import (
+    contours_geojson_bytes,
+    contours_shapefile_zip,
+    report_csv_bytes,
+    report_json_bytes,
+)
 from app.reports import build_report
 from app.schemas import SpatioTemporalQuery
 from app.store import Catalog
@@ -75,3 +81,51 @@ def report(q: SpatioTemporalQuery, request: Request) -> dict:
 @router.get("/meta")
 def meta(request: Request) -> dict:
     return _catalog(request).meta()
+
+
+def _attachment(content: bytes, media_type: str, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/export/burned-areas.geojson")
+def export_geojson(q: SpatioTemporalQuery, request: Request) -> Response:
+    geom = resolve_geometry(q)
+    d0, d1 = _bounds(q)
+    gdf = _catalog(request).query_contours(geom, d0, d1)
+    return _attachment(contours_geojson_bytes(gdf), "application/geo+json", "burned_areas.geojson")
+
+
+@router.post("/export/burned-areas.shp.zip")
+def export_shapefile(q: SpatioTemporalQuery, request: Request) -> Response:
+    geom = resolve_geometry(q)
+    d0, d1 = _bounds(q)
+    gdf = _catalog(request).query_contours(geom, d0, d1)
+    if gdf.empty:
+        raise HTTPException(status_code=404, detail="в выборке нет контуров гарей — нечего выгружать")
+    return _attachment(contours_shapefile_zip(gdf), "application/zip", "burned_areas_shp.zip")
+
+
+@router.post("/export/report.json")
+def export_report_json(q: SpatioTemporalQuery, request: Request) -> Response:
+    geom = resolve_geometry(q)
+    d0, d1 = _bounds(q)
+    cat = _catalog(request)
+    rep = build_report(
+        cat.query_contours(geom, d0, d1), cat.query_hotspots(geom, d0, d1), geom, q.date_from, q.date_to
+    )
+    return _attachment(report_json_bytes(rep), "application/json", "report.json")
+
+
+@router.post("/export/report.csv")
+def export_report_csv(q: SpatioTemporalQuery, request: Request) -> Response:
+    geom = resolve_geometry(q)
+    d0, d1 = _bounds(q)
+    cat = _catalog(request)
+    rep = build_report(
+        cat.query_contours(geom, d0, d1), cat.query_hotspots(geom, d0, d1), geom, q.date_from, q.date_to
+    )
+    return _attachment(report_csv_bytes(rep), "text/csv; charset=utf-8", "report.csv")
