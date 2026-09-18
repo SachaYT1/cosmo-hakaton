@@ -3,7 +3,7 @@
 const SEVERITY_COLORS = { 1: "#ffd23f", 2: "#ff8c1a", 3: "#d7191c" };
 const SEVERITY_LABELS = { 1: "слабая", 2: "средняя", 3: "сильная" };
 
-const map = L.map("map").setView([48.0, 44.0], 6);
+const map = L.map("map", { preferCanvas: true }).setView([48.0, 44.0], 6);
 map.attributionControl.setPrefix(false);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
@@ -134,6 +134,33 @@ function renderReport(rep) {
   document.getElementById("report").classList.remove("hidden");
 }
 
+// Порог отрисовки мелких контуров в зависимости от размера области запроса.
+// Только для карты: справка и выгрузки всегда считаются по всем контурам.
+function mapMinAreaHa() {
+  const layers = drawnItems.getLayers();
+  if (!layers.length) return 0;
+  const b = layers[0].getBounds();
+  const midLat = ((b.getSouth() + b.getNorth()) / 2) * (Math.PI / 180);
+  const areaKm2 =
+    (b.getEast() - b.getWest()) * 111.32 * Math.cos(midLat) *
+    (b.getNorth() - b.getSouth()) * 110.57;
+  if (areaKm2 > 50000) return 5;
+  if (areaKm2 > 5000) return 1;
+  if (areaKm2 > 500) return 0.2;
+  return 0;
+}
+
+function renderFilterNote(minArea) {
+  const el = document.getElementById("filter-note");
+  if (minArea > 0) {
+    el.textContent = `Для скорости отрисовки на карте скрыты контуры мельче ${minArea} га. ` +
+      "Справка и выгрузки учитывают все контуры.";
+    el.classList.remove("hidden");
+  } else {
+    el.classList.add("hidden");
+  }
+}
+
 async function runQuery() {
   clearError();
   const geometry = currentGeometry();
@@ -142,17 +169,19 @@ async function runQuery() {
     return;
   }
   const body = requestBody(geometry);
+  const minArea = mapMinAreaHa();
   const btn = document.getElementById("btn-query");
   btn.disabled = true;
   try {
     const [hs, ba, rep] = await Promise.all([
       apiPost("/api/hotspots", body),
-      apiPost("/api/burned-areas", body),
+      apiPost("/api/burned-areas", { ...body, min_area_ha: minArea }),
       apiPost("/api/report", body),
     ]);
     renderHotspots(hs);
     renderContours(ba);
     renderReport(rep);
+    renderFilterNote(minArea);
   } catch (err) {
     showError(err.message);
   } finally {

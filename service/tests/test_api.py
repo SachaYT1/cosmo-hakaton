@@ -96,3 +96,13 @@ def test_index_served(client):
     r = client.get("/")
     assert r.status_code == 200
     assert 'id="map"' in r.text
+
+
+def test_burned_areas_min_area_filter(client):
+    # фильтр мелких контуров действует только на карту (/api/burned-areas)...
+    r = client.post("/api/burned-areas", json={**QUERY, "min_area_ha": 0.1})
+    areas = sorted(f["properties"]["area_ha"] for f in r.json()["features"])
+    assert areas == [0.2, 0.4]  # контур 0.04 га скрыт
+    # ...а справка остаётся точной, со всеми контурами
+    rep = client.post("/api/report", json={**QUERY, "min_area_ha": 0.1}).json()
+    assert rep["total_burned_area_ha"] == pytest.approx(0.64, abs=0.01)

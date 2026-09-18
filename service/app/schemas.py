@@ -12,6 +12,9 @@ class SpatioTemporalQuery(BaseModel):
     bbox: list[float] | None = None
     date_from: date
     date_to: date
+    # Фильтр отрисовки: скрыть контуры мельче порога (только /api/burned-areas;
+    # справка и выгрузки всегда считаются по всем контурам)
+    min_area_ha: float = 0.0
 
     @model_validator(mode="after")
     def _check(self) -> "SpatioTemporalQuery":

@@ -65,7 +65,10 @@ def hotspots(q: SpatioTemporalQuery, request: Request) -> dict:
 def burned_areas(q: SpatioTemporalQuery, request: Request) -> dict:
     geom = resolve_geometry(q)
     d0, d1 = _bounds(q)
-    return feature_collection(_catalog(request).query_contours(geom, d0, d1))
+    gdf = _catalog(request).query_contours(geom, d0, d1)
+    if q.min_area_ha > 0:
+        gdf = gdf[gdf["area_ha"] >= q.min_area_ha]
+    return feature_collection(gdf)
 
 
 @router.post("/report")
