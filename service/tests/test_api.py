@@ -106,3 +106,34 @@ def test_burned_areas_min_area_filter(client):
     # ...а справка остаётся точной, со всеми контурами
     rep = client.post("/api/report", json={**QUERY, "min_area_ha": 0.1}).json()
     assert rep["total_burned_area_ha"] == pytest.approx(0.64, abs=0.01)
+
+
+def test_multipolygon_with_overlap(client):
+    # две перекрывающиеся области: геометрия чинится make_valid, без двойного счёта площади
+    mp = {"type": "MultiPolygon", "coordinates": [
+        [[[30, 40], [60, 40], [60, 60], [30, 60], [30, 40]]],
+        [[[35, 42], [55, 42], [55, 58], [35, 58], [35, 42]]],
+    ]}
+    body = {"polygon": mp, "date_from": "2021-01-01", "date_to": "2021-12-31"}
+    r = client.post("/api/hotspots", json=body)
+    assert r.status_code == 200
+    assert len(r.json()["features"]) == 3
+    rep = client.post("/api/report", json=body).json()
+    assert rep["total_burned_area_ha"] == pytest.approx(0.64, abs=0.01)
+
+
+def test_two_separate_areas(client):
+    # две маленькие несмежные области: одна вокруг термоточки, другая вокруг гари
+    hs = client.post("/api/hotspots", json=QUERY).json()
+    lon, lat = hs["features"][0]["geometry"]["coordinates"]
+    ba = client.post("/api/burned-areas", json=QUERY).json()
+    blon, blat = ba["features"][0]["geometry"]["coordinates"][0][0]
+
+    def box(cx, cy, d=0.05):
+        return [[[cx - d, cy - d], [cx + d, cy - d], [cx + d, cy + d], [cx - d, cy + d], [cx - d, cy - d]]]
+
+    mp = {"type": "MultiPolygon", "coordinates": [box(lon, lat), box(blon, blat)]}
+    body = {"polygon": mp, "date_from": "2021-01-01", "date_to": "2021-12-31"}
+    assert len(client.post("/api/hotspots", json=body).json()["features"]) >= 1
+    rep = client.post("/api/report", json=body).json()
+    assert rep["total_burned_area_ha"] > 0

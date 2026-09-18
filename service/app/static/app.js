@@ -15,18 +15,59 @@ const contoursLayer = L.layerGroup().addTo(map);
 const hotspotsLayer = L.layerGroup().addTo(map);
 let demo = null;
 
-new L.Control.Draw({
-  draw: {
-    polygon: { allowIntersection: false, showArea: true },
-    rectangle: {},
-    polyline: false, circle: false, marker: false, circlemarker: false,
-  },
-  edit: { featureGroup: drawnItems, edit: false },
-}).addTo(map);
+// Русские подсказки инструментов рисования
+L.drawLocal.draw.handlers.rectangle.tooltip.start = "Зажмите кнопку мыши и растяните прямоугольник";
+L.drawLocal.draw.handlers.simpleshape.tooltip.end = "Отпустите кнопку мыши";
+L.drawLocal.draw.handlers.polygon.tooltip = {
+  start: "Кликните, чтобы поставить первую точку",
+  cont: "Кликните, чтобы добавить точку",
+  end: "Кликните первую точку, чтобы замкнуть полигон",
+};
 
-map.on(L.Draw.Event.CREATED, (e) => {
+const SHAPE_STYLE = { color: "#8ab4f8", weight: 2, fill: true, fillOpacity: 0.03 };
+let activeDrawer = null;
+
+function startDraw(kind, btn) {
+  if (activeDrawer) activeDrawer.disable();
+  activeDrawer = kind === "rect"
+    ? new L.Draw.Rectangle(map, { shapeOptions: SHAPE_STYLE })
+    : new L.Draw.Polygon(map, { allowIntersection: false, showArea: true, shapeOptions: SHAPE_STYLE });
+  activeDrawer.enable();
+  document.querySelectorAll(".tool").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+document.getElementById("btn-draw-rect").addEventListener("click", function () { startDraw("rect", this); });
+document.getElementById("btn-draw-poly").addEventListener("click", function () { startDraw("poly", this); });
+document.getElementById("btn-clear-areas").addEventListener("click", () => {
   drawnItems.clearLayers();
-  drawnItems.addLayer(e.layer);
+  updateAreaState();
+});
+
+function addArea(layer) {
+  const btn = document.createElement("button");
+  btn.textContent = "Удалить область";
+  btn.addEventListener("click", () => {
+    map.closePopup();
+    drawnItems.removeLayer(layer);
+    updateAreaState();
+  });
+  layer.bindPopup(btn);
+  drawnItems.addLayer(layer);
+  updateAreaState();
+}
+
+function updateAreaState() {
+  const n = drawnItems.getLayers().length;
+  document.getElementById("map-hint").classList.toggle("hidden", n > 0);
+  document.getElementById("area-count").textContent =
+    n === 0 ? "Область не выбрана" : `Областей выбрано: ${n}`;
+}
+
+map.on(L.Draw.Event.CREATED, (e) => addArea(e.layer));
+map.on(L.Draw.Event.DRAWSTOP, () => {
+  document.querySelectorAll(".tool").forEach((b) => b.classList.remove("active"));
+  activeDrawer = null;
 });
 
 // Граница территории мониторинга (пунктир)
@@ -52,8 +93,10 @@ fetch("/api/meta")
   .catch(() => {});
 
 function currentGeometry() {
-  const layers = drawnItems.getLayers();
-  return layers.length ? layers[0].toGeoJSON().geometry : null;
+  const geoms = drawnItems.getLayers().map((l) => l.toGeoJSON().geometry);
+  if (!geoms.length) return null;
+  if (geoms.length === 1) return geoms[0];
+  return { type: "MultiPolygon", coordinates: geoms.map((g) => g.coordinates) };
 }
 
 function requestBody(geometry) {
@@ -139,7 +182,7 @@ function renderReport(rep) {
 function mapMinAreaHa() {
   const layers = drawnItems.getLayers();
   if (!layers.length) return 0;
-  const b = layers[0].getBounds();
+  const b = drawnItems.getBounds();
   const midLat = ((b.getSouth() + b.getNorth()) / 2) * (Math.PI / 180);
   const areaKm2 =
     (b.getEast() - b.getWest()) * 111.32 * Math.cos(midLat) *
@@ -198,7 +241,7 @@ document.getElementById("btn-demo").addEventListener("click", () => {
   }
   const [w, s, e, n] = demo.bbox;
   drawnItems.clearLayers();
-  drawnItems.addLayer(L.rectangle([[s, w], [n, e]], { color: "#8ab4f8", weight: 2, fill: false }));
+  addArea(L.rectangle([[s, w], [n, e]], SHAPE_STYLE));
   document.getElementById("date-from").value = demo.date_from;
   document.getElementById("date-to").value = demo.date_to;
   map.fitBounds([[s, w], [n, e]], { padding: [30, 30] });

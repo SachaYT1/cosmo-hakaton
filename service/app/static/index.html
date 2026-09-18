@@ -11,8 +11,15 @@
 <body>
 <aside id="panel">
   <h1>🔥 Мониторинг пожаров</h1>
-  <p class="hint">Нарисуйте полигон или прямоугольник на карте (инструменты слева сверху),
-  задайте период и нажмите «Запросить».</p>
+  <section>
+    <h2>Область запроса</h2>
+    <div class="row">
+      <button id="btn-draw-rect" class="tool">▭ Прямоугольник</button>
+      <button id="btn-draw-poly" class="tool">⬠ Полигон</button>
+      <button id="btn-clear-areas" title="Очистить все области">✕</button>
+    </div>
+    <p class="hint" id="area-count">Область не выбрана</p>
+  </section>
   <label>Дата с <input type="date" id="date-from"></label>
   <label>Дата по <input type="date" id="date-to"></label>
   <div class="row">
@@ -42,6 +49,8 @@
   <footer>REST API: <a href="/docs" target="_blank">/docs</a></footer>
 </aside>
 <div id="map"></div>
+<div id="map-hint">⬅ Нажмите «Прямоугольник» или «Полигон» и выделите область на карте.
+Областей можно нарисовать несколько; клик по области откроет кнопку удаления.</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 <script src="app.js"></script>

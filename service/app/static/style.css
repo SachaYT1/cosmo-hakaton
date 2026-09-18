@@ -36,3 +36,13 @@ footer { margin-top: auto; font-size: 12px; color: #9aa0a6; }
 footer a { color: #8ab4f8; }
 
 #map { flex: 1; height: 100%; }
+
+button.tool.active { background: #8ab4f8; color: #1c1f26; border-color: #8ab4f8; font-weight: 600; }
+
+#map-hint {
+  position: fixed; top: 14px; left: 356px; right: 60px; z-index: 1000;
+  max-width: 560px; padding: 10px 14px; border-radius: 8px;
+  background: rgba(28, 31, 38, .92); color: #e8eaed; font-size: 13px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .35); pointer-events: none;
+}
+#map-hint.hidden { display: none; }

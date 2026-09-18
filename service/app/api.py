@@ -5,6 +5,7 @@ import json
 import geopandas as gpd
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Request, Response
+from shapely import make_valid, unary_union
 from shapely.geometry import box, shape
 from shapely.geometry.base import BaseGeometry
 
@@ -37,6 +38,16 @@ def resolve_geometry(q: SpatioTemporalQuery) -> BaseGeometry:
             geom = shape(q.polygon)
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"невалидная геометрия: {exc}") from exc
+    if not geom.is_valid:
+        # перекрывающиеся области из UI — валидный сценарий: чиним объединением частей
+        # (make_valid без объединения превращает зону перекрытия в дырку)
+        if geom.geom_type == "MultiPolygon":
+            geom = unary_union([make_valid(g) for g in geom.geoms])
+        else:
+            geom = make_valid(geom)
+        if geom.geom_type == "GeometryCollection":
+            polys = [g for g in geom.geoms if g.geom_type in ("Polygon", "MultiPolygon")]
+            geom = unary_union(polys) if polys else geom
     if geom.is_empty or not geom.is_valid:
         raise HTTPException(status_code=422, detail="невалидная или пустая геометрия запроса")
     if geom.geom_type not in ("Polygon", "MultiPolygon"):
