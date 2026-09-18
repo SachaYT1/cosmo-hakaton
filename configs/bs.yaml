@@ -1,0 +1,40 @@
+# Конфигурация модуля картирования гарей и степени поражения (BS)
+
+data:
+  chip_size: 512
+  gsd_m: 20
+  s2_channels: [B2, B3, B4, B5, B6, B7, B8A, B11, B12, SCL]
+  s1_channels: [VV, VH]
+  aux_channels: [dem, slope, aspect, landcover]
+  indices: [nbr, dnbr, rdnbr]
+
+model:
+  name: unet_siamese
+  # branch_channels — каналов НА ОДНУ дату: S2(10) + S1(2) + NBR этой даты(1) = 13
+  branch_channels: 13
+  # static_channels — каналов без даты: dem, slope, aspect, landcover
+  static_channels: 4
+  n_classes: 4   # 0 не горело, 1/2/3 степени поражения
+
+train:
+  epochs: 60
+  batch_size: 8
+  lr: 2e-4
+  seed: 42
+  val_split: 0.15
+  split_group_cols: [fire_event_id]   # заполнен для BS — группируем по пожару
+  class_weights: [1.0, 2.0, 2.0, 2.5]  # компенсация дисбаланса классов
+
+loss:
+  ce_weight: 1.0
+  dice_weight: 1.0
+
+thresholds:
+  # пороги dNBR калиброваны по типу покрова (см. постановку, рис. 6)
+  by_landcover:
+    forest_shrub: [0.10, 0.27, 0.66]
+    grassland: [0.062, 0.204, 0.386]
+    cropland: [0.07, 0.177, 0.38]
+    wetland_floodplain: [0.075, 0.331, 0.677]
+
+weights_path: weights/bs.pt

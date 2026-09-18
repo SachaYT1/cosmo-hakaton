@@ -1,0 +1,36 @@
+# Конфигурация модуля активного горения (AF)
+
+data:
+  chip_size: 256
+  gsd_m: 375
+  channels: [I1, I2, I3, I4, I5]
+  aux_channels: [landcover, dem, sun_zenith, sensor_zenith, t2m, rh2m, wind, valid_mask]
+
+model:
+  name: unet_small
+  in_channels: 13
+  n_classes: 1
+
+train:
+  epochs: 50
+  batch_size: 16
+  lr: 3e-4
+  seed: 42
+  val_split: 0.15
+  # fire_event_id в af/meta.csv пуст (заполнен только для BS); чипы с одной и той же
+  # гео-плиткой (x_min,y_min) повторяются на разные даты — группируем split по ним,
+  # чтобы одна и та же локация не оказалась одновременно в train и val
+  split_group_cols: [x_min, y_min]
+
+loss:
+  focal_weight: 1.0
+  dice_weight: 1.0
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+
+postprocess:
+  # фильтрация техногенных термоаномалий по повторяемости в архиве
+  persistence_min_winter_hits: 3
+  persistence_radius_px: 1
+
+weights_path: weights/af.pt

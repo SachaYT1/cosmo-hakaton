@@ -1,0 +1,14 @@
+numpy
+pandas
+pyyaml
+rasterio
+shapely
+geopandas
+torch
+scikit-learn
+fastapi
+uvicorn[standard]
+sqlalchemy
+geoalchemy2
+psycopg2-binary
+pytest

@@ -1,0 +1,26 @@
+# данные соревнования — не коммитим
+train/
+test/
+*.tar
+*.tif
+fire-aoi/*.zip
+
+# веса
+weights/*.pt
+weights/*.pth
+weights/*.onnx
+!weights/.gitkeep
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# служебное
+.env
+submission*.csv
+!sample_submission.csv
+notebooks/.ipynb_checkpoints/
+.DS_Store
