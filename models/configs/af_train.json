@@ -1,0 +1,27 @@
+{
+  "models": [
+    {
+      "kind": "lgb",
+      "feature_set": "context",
+      "params": {
+        "objective": "binary",
+        "learning_rate": 0.04,
+        "colsample_bytree": 0.85,
+        "subsample": 0.85,
+        "subsample_freq": 1,
+        "min_child_samples": 20,
+        "reg_lambda": 1.0,
+        "n_jobs": 6,
+        "random_state": 42,
+        "verbosity": -1,
+        "force_col_wise": true,
+        "deterministic": true,
+        "n_estimators": 800,
+        "num_leaves": 31,
+        "max_bin": 511
+      },
+      "weight": 1.0
+    }
+  ],
+  "selected_trial": "lgb_context31"
+}

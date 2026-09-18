@@ -1,0 +1,25 @@
+# Datasets and derived caches (tens of GB, regenerable)
+/data
+/cache
+
+# Generated submissions
+/outputs
+
+# Logs
+logs/*.log
+
+# Large array dumps anywhere
+*.npy
+*.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp

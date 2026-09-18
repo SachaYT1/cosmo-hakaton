@@ -26,6 +26,9 @@ def _init(bs_model: str) -> None:
     if bs_model == "unet":
         from firemon.bs_unet import BSUNetPredictor
         _PRED["bs"] = BSUNetPredictor()
+    elif bs_model == "learned":
+        from firemon.bs_model import BSPredictor
+        _PRED["bs"] = BSPredictor()
     else:
         _PRED["bs"] = BSRulePredictor()
 
@@ -38,17 +41,16 @@ def _predict(args: tuple[str, str]) -> list[tuple[str, int, str]]:
             return [(chip_id, 1, encode(mask == 1))]
         mask = _PRED["bs"](load_bs(root, chip_id, with_mask=False))
         return [(chip_id, k, encode(mask == k)) for k in (1, 2, 3)]
-    except Exception as e:  # never fail the whole submission because of one chip
-        print(f"WARNING: {chip_id} failed ({e!r}); writing empty mask", file=sys.stderr)
-        return [(chip_id, k, "") for k in ((1,) if chip_id.startswith("AF") else (1, 2, 3))]
+    except Exception as e:
+        raise RuntimeError(f"Prediction failed for {chip_id}; refusing to silently write an empty mask") from e
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--output", default="submission.csv")
-    ap.add_argument("--bs-model", choices=["unet", "rules"], default=os.environ.get("BS_MODEL", "unet"))
-    ap.add_argument("--workers", type=int, default=min(8, os.cpu_count() or 1))
+    ap.add_argument("--bs-model", choices=["learned", "unet", "rules"], default=os.environ.get("BS_MODEL", "learned"))
+    ap.add_argument("--workers", type=int, default=min(4, os.cpu_count() or 1))
     a = ap.parse_args()
 
     t0 = time.time()

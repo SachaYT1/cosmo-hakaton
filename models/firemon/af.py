@@ -23,6 +23,30 @@ FEATURES = [
     "ndvi", "glint",
 ]
 
+CONTEXT_FEATURES = [*FEATURES, "valid"]
+for _band in ("I4", "dT", "I5"):
+    for _window in (7, 15, 31):
+        CONTEXT_FEATURES += [f"{_band}_ring_{s}{_window}" for s in ("delta", "z", "std")]
+    CONTEXT_FEATURES += [f"{_band}_dmedian{w}" for w in (3, 5)]
+    CONTEXT_FEATURES += [f"{_band}_dmean3", f"{_band}_std3"]
+for _window in (3, 7, 15):
+    CONTEXT_FEATURES += [f"{s}_frac{_window}" for s in
+                         ("valid", "hot330", "dt20", "candidate", "lc10", "lc40", "lc50", "lc80")]
+CONTEXT_FEATURES += ["I4_minus_t2m", "I5_minus_t2m", "I3_minus_I1", "I3_minus_I2", "I3_I2_index"]
+
+
+def feature_names(feature_set: str = "legacy") -> list[str]:
+    if feature_set == "legacy":
+        return FEATURES
+    if feature_set == "context":
+        return CONTEXT_FEATURES
+    raise ValueError(f"Unknown AF feature set: {feature_set}")
+
+
+def extract_features(chip: AFChip, feature_set: str = "legacy") -> np.ndarray:
+    feature_names(feature_set)  # reject an incompatible model/config early
+    return enhanced_features(chip) if feature_set == "context" else features(chip)
+
 
 def _mean_std(x: np.ndarray, valid: np.ndarray, w: int) -> tuple[np.ndarray, np.ndarray]:
     """Mean/std over a w x w window counting only valid pixels (candidate excluded implicitly
@@ -80,6 +104,58 @@ def candidates(f: np.ndarray) -> np.ndarray:
     d = f[..., FEATURES.index("I4_dmean15")]
     ddt = f[..., FEATURES.index("dT_dmean15")]
     return (i4 > 320) | ((d > 3) & (ddt > 2))
+
+
+def enhanced_features(chip: AFChip) -> np.ndarray:
+    """Image-only contextual features; the first columns retain the v1 schema.
+
+    Annuli exclude the central 3x3 neighbourhood from the background estimate.
+    This reduces contamination by the hot source itself. No metadata, dates,
+    coordinates or labels are used, so the same transform works on blind test.
+    """
+    base = features(chip)
+    i4 = base[..., FEATURES.index("I4")]
+    i5 = base[..., FEATURES.index("I5")]
+    dt = i4 - i5
+    valid = ((chip.viirs[..., 7] > 0) & np.isfinite(chip.viirs[..., 3])
+             & np.isfinite(chip.viirs[..., 4]))
+    extra = [valid.astype(np.float32)]
+    v = valid.astype(np.float32)
+
+    def box(x, w):
+        return cv2.boxFilter(x, -1, (w, w), normalize=False, borderType=cv2.BORDER_REFLECT)
+
+    for x in (i4, dt, i5):
+        xv = np.where(valid, x, 0).astype(np.float32)
+        for w in (7, 15, 31):
+            n = np.maximum(box(v, w) - box(v, 3), 1)
+            mean = (box(xv, w) - box(xv, 3)) / n
+            variance = np.maximum((box(xv*xv, w)-box(xv*xv, 3))/n - mean*mean, 0)
+            std = np.sqrt(variance)
+            extra.extend([x-mean, (x-mean)/(std+1), std])
+        for w in (3, 5):
+            median = cv2.medianBlur(x.astype(np.float32), w)
+            extra.append(x-median)
+        mean, std = _mean_std(x, valid, 3)
+        extra.extend([x-mean, std])
+
+    # Neighbour support and land-cover context distinguish isolated reflectors,
+    # water/urban edges and clusters without deleting small real fires by rule.
+    for w in (3, 7, 15):
+        denom = np.maximum(box(v, w), 1)
+        extra.append(box(v, w)/(w*w))
+        for hot in ((i4 > 330), (dt > 20), candidates(base)):
+            extra.append(box((hot & valid).astype(np.float32), w)/denom)
+        for cover in (10, 40, 50, 80):
+            extra.append(box((chip.aux[..., 0] == cover).astype(np.float32), w)/(w*w))
+
+    i1, i2, i3 = (chip.viirs[..., k] for k in (0, 1, 2))
+    extra.extend([i4-chip.aux[..., 2], i5-chip.aux[..., 2], i3-i1, i3-i2])
+    with np.errstate(divide="ignore", invalid="ignore"):
+        extra.append((i3-i2)/(np.abs(i3)+np.abs(i2)+0.01))
+    out = np.concatenate([base, np.stack(extra, axis=-1)], axis=-1).astype(np.float32)
+    out[np.isinf(out)] = np.nan
+    return out
 
 
 def rule_predict(chip: AFChip, day_t: float = 330.0, night_t: float = 317.0,

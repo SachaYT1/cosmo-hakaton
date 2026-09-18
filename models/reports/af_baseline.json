@@ -1,0 +1,42 @@
+{
+  "selected": {
+    "name": "lgb_context31",
+    "kind": "lgb",
+    "n_features": 100,
+    "params": {
+      "objective": "binary",
+      "learning_rate": 0.04,
+      "colsample_bytree": 0.85,
+      "subsample": 0.85,
+      "subsample_freq": 1,
+      "min_child_samples": 20,
+      "reg_lambda": 1.0,
+      "n_jobs": 6,
+      "random_state": 42,
+      "verbosity": -1,
+      "force_col_wise": true,
+      "deterministic": true,
+      "n_estimators": 800,
+      "num_leaves": 31,
+      "max_bin": 511
+    },
+    "best": {
+      "threshold": 0.56,
+      "TP": 6958,
+      "FP": 381,
+      "FN": 309,
+      "F1_af": 0.9527591400794194,
+      "precision": 0.9480855702411772,
+      "recall": 0.9574790147240952,
+      "f1": 0.9527591400794194
+    },
+    "seconds": 343.1690628528595
+  },
+  "training_samples": 1789574,
+  "full_training_chips": 420,
+  "seconds_full_fit": 140.3,
+  "weights": "weights/af_baseline_lgb_context31.txt",
+  "sha256": "2639eec27d6a49e857f3a78510ba4a843d1a2ad95194b83feb6663135c915a83",
+  "external_training_used": false,
+  "note": "Selected by the common pre-2024 development protocol. This is not a private score."
+}

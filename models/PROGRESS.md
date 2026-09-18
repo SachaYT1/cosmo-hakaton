@@ -20,13 +20,8 @@ python -m scripts.validate_submission outputs/submission_rules.csv     # -> VALI
 
 `--bs-model rules` is required for now. The default (`unet`) needs `configs/bs_unet.json` and trained weights, and neither exists yet.
 
-**Measured through the submission format**: `scripts/oof_submission.py` writes an out-of-fold `submission.csv` for all 644 training chips (1,092 rows, passes the validator), decodes it and scores it. The result is identical to scoring the masks directly.
-
-| F1_af | IoU_burn | mIoU_sev (sev1 / sev2 / sev3) | **Score** |
-|---|---|---|---|
-| 0.953 | 0.434 | 0.462 (0.228 / 0.479 / 0.679) | **0.624** |
-
-Output: `outputs/oof_submission_train.csv`, `reports/oof_metrics.json`.
+The metric's combined Score can't be stated honestly yet: the AF and BS numbers come from different CV setups. Plugging them into the formula as a rough guide gives
+`0.35·0.953 + 0.35·0.434 + 0.30·0.462 ≈ 0.62`.
 
 ## Step by step
 

@@ -28,7 +28,8 @@ def chip_counts(z, threshold: float | np.ndarray) -> np.ndarray:
     """(n_chips, 3) tp/fp/fn of the XGB model at `threshold` (scalar or per-chip array)."""
     n = len(z["ids"])
     t = np.broadcast_to(threshold, (n,))[z["chip"]]
-    p, y = z["prob"] > t, z["y"]
+    inclusive = str(z.get("threshold_rule", ">")) == ">="
+    p, y = (z["prob"] >= t if inclusive else z["prob"] > t), z["y"]
     c = np.zeros((n, 3), np.int64)
     np.add.at(c[:, 0], z["chip"], p & y)
     np.add.at(c[:, 1], z["chip"], p & ~y)
@@ -73,10 +74,12 @@ def main(oof_path: str, test_root: str, out: str) -> None:
     t = float(z["threshold"])
     res["xgb"] = table(f"xgb OOF, one threshold {t:.2f}", chip_counts(z, t), night, w)
 
-    # Separate day/night thresholds, chosen without leakage: for each fold the thresholds are
-    # picked on the OOF predictions of the *other* folds.
+    # Diagnostic cross-fitted thresholds, NOT a strict nested-CV estimate:
+    # models behind the other OOF folds have seen this fold's training labels.
+    # A temporal holdout with calibration restricted to earlier years is reported
+    # separately by train_af.py --validate-year.
     grid = np.round(np.arange(0.05, 0.95, 0.01), 2)
-    chip_fold = np.full(len(night), -1)
+    chip_fold = z.get("chip_fold", np.full(len(night), -1))
     chip_fold[z["chip"]] = z["fold"]
     per_chip_t = np.full(len(night), t)
     for f in np.unique(z["fold"]):

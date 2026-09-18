@@ -32,7 +32,7 @@ def oof_mask(z: dict, i: int, chip) -> np.ndarray:
     cand = candidates(features(chip))
     prob = np.zeros(cand.shape, np.float32)
     prob[cand] = z["prob"][z["chip"] == i]
-    return prob > float(z["threshold"])
+    return prob >= float(z["threshold"]) if str(z.get("threshold_rule", ">")) == ">=" else prob > float(z["threshold"])
 
 
 def background(chip) -> np.ndarray:
