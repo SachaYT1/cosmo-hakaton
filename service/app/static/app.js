@@ -90,7 +90,7 @@ async function apiPost(url, body) {
 function renderHotspots(fc) {
   hotspotsLayer.clearLayers();
   L.geoJSON(fc, {
-    pointToLayer: (f, latlng) =>
+    pointToLayer: (_f, latlng) =>
       L.circleMarker(latlng, { radius: 4, color: "#7a0000", weight: 1, fillColor: "#ff3b30", fillOpacity: 0.9 }),
     onEachFeature: (f, layer) =>
       layer.bindPopup(
