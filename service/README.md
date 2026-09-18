@@ -76,6 +76,15 @@ curl -s -X POST localhost:8000/api/report -H 'Content-Type: application/json' -d
 - Выгрузки — в EPSG:4326 (WGS84), у Shapefile колонка `fire_event_id`
   переименована в `fire_event` (ограничение формата в 10 символов).
 
+## Docker
+
+```bash
+cd service
+uv run python scripts/ingest.py --data-dir ../train   # каталог собирается до сборки образа
+docker build -t fire-service .
+docker run --rm -p 8000:8000 fire-service
+```
+
 ## Тесты
 
 ```bash
