@@ -4,6 +4,7 @@ const SEVERITY_COLORS = { 1: "#ffd23f", 2: "#ff8c1a", 3: "#d7191c" };
 const SEVERITY_LABELS = { 1: "слабая", 2: "средняя", 3: "сильная" };
 
 const map = L.map("map").setView([48.0, 44.0], 6);
+map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors",
