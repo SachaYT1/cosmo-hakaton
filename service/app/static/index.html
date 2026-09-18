@@ -1,5 +1,48 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><meta charset="utf-8"><title>Мониторинг пожаров</title></head>
-<body><div id="map"></div></body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мониторинг природных пожаров — аналитический сервис</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside id="panel">
+  <h1>🔥 Мониторинг пожаров</h1>
+  <p class="hint">Нарисуйте полигон или прямоугольник на карте (инструменты слева сверху),
+  задайте период и нажмите «Запросить».</p>
+  <label>Дата с <input type="date" id="date-from"></label>
+  <label>Дата по <input type="date" id="date-to"></label>
+  <div class="row">
+    <button id="btn-query" class="primary">Запросить</button>
+    <button id="btn-demo">Показать пример</button>
+  </div>
+  <div id="error" class="error hidden"></div>
+  <section id="report" class="hidden">
+    <h2>Аналитическая справка</h2>
+    <div id="report-body"></div>
+    <h2>Выгрузки</h2>
+    <div class="row wrap">
+      <button data-export="burned-areas.geojson">GeoJSON</button>
+      <button data-export="burned-areas.shp.zip">Shapefile</button>
+      <button data-export="report.json">Справка JSON</button>
+      <button data-export="report.csv">Справка CSV</button>
+    </div>
+  </section>
+  <section>
+    <h2>Легенда</h2>
+    <div class="legend"><span class="swatch" style="background:#ffd23f"></span> 1 — слабая степень</div>
+    <div class="legend"><span class="swatch" style="background:#ff8c1a"></span> 2 — средняя степень</div>
+    <div class="legend"><span class="swatch" style="background:#d7191c"></span> 3 — сильная степень</div>
+    <div class="legend"><span class="dot"></span> термоточка VIIRS</div>
+  </section>
+  <footer>REST API: <a href="/docs" target="_blank">/docs</a></footer>
+</aside>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="app.js"></script>
+</body>
 </html>
