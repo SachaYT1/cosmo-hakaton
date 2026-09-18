@@ -1,0 +1,15 @@
+{
+ "via_submission": {
+  "F1_af": 0.9534435541129932,
+  "IoU_burn": 0.4335297793031534,
+  "mIoU_sev": 0.4615854706437473,
+  "IoU_sev1": 0.22747254047352009,
+  "IoU_sev2": 0.4787778513473628,
+  "IoU_sev3": 0.6785060201103589,
+  "Score": 0.6239163078887755
+ },
+ "direct_equal": true,
+ "format_errors": [],
+ "af": "xgb OOF (5-fold grouped by date)",
+ "bs": "rule model OOF (5-fold by chip)"
+}
