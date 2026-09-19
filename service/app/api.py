@@ -22,8 +22,13 @@ from app.store import Catalog
 router = APIRouter(prefix="/api")
 
 
-def healthz() -> dict:
-    return {"status": "ok"}
+def healthz(request: Request) -> dict:
+    catalog = _catalog(request)
+    return {
+        "status": "ready",
+        "hotspot_count": int(len(catalog.hotspots)),
+        "contour_count": int(len(catalog.contours)),
+    }
 
 
 def _catalog(request: Request) -> Catalog:

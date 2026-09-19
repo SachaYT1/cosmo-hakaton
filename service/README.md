@@ -14,7 +14,7 @@
 ```bash
 cd service
 uv sync                                                  # окружение
-uv run python scripts/ingest.py --data-dir ../train      # каталог: data/catalog.gpkg (~10 сек)
+uv run python scripts/ingest.py --data-dir ../train      # predictions из preds_train.csv
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000   # сервис
 ```
 
@@ -29,12 +29,15 @@ UI: http://localhost:8000 · Swagger: http://localhost:8000/docs
 
 Постановка разрешает работу «на заранее подготовленном ограниченном наборе сцен».
 Сервис работает поверх georeferenced train-чипов (геопривязка и даты из meta.csv).
-По умолчанию каталог собирается из эталонных масок; чтобы подключить предсказания
-Модулей 1–2, выполните ingest из submission.csv по тем же чипам:
+По умолчанию каталог собирается из `preds_train.csv`, то есть из предсказаний
+Модулей 1–2. Чтобы проверить расчёты по эталонным маскам, выполните:
 
 ```bash
-uv run python scripts/ingest.py --data-dir ../train --source predictions --submission preds.csv
+uv run python scripts/ingest.py --data-dir ../train --source gt --output data/catalog_gt.gpkg
 ```
+
+Сервис намеренно не стартует без корректного GeoPackage с обоими слоями: сначала
+выполните ingest. `/healthz` возвращает готовность и числа загруженных объектов.
 
 ## REST API
 
@@ -69,8 +72,8 @@ curl -s -X POST localhost:8000/api/report -H 'Content-Type: application/json' -d
 ## Семантика расчётов (важно для воспроизводимости)
 
 - **Площади считаются в родной UTM-зоне чипа** (EPSG:32637/32638), пиксель BS = 20×20 м = 0.04 га.
-- **Справка** учитывает площадь *пересечения* контуров с полигоном запроса;
-  полная площадь каждого контура — атрибут `area_ha` в выгрузках.
+- Карта, выгрузки и **справка** используют контуры, обрезанные полигоном запроса;
+  атрибут `area_ha` пересчитывается в родной UTM-зоне для возвращаемой геометрии.
 - **Фильтр по датам:** термоточка — по дате пролёта `acq_datetime`;
   контур гари попадает в выборку, если его `date_post` лежит в интервале.
 - Выгрузки — в EPSG:4326 (WGS84), у Shapefile колонка `fire_event_id`
@@ -80,7 +83,7 @@ curl -s -X POST localhost:8000/api/report -H 'Content-Type: application/json' -d
 
 ```bash
 cd service
-uv run python scripts/ingest.py --data-dir ../train   # каталог собирается до сборки образа
+uv run python scripts/ingest.py --data-dir ../train   # predictions; каталог до сборки образа
 docker build -t fire-service .
 docker run --rm -p 8000:8000 fire-service
 ```

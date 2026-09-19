@@ -49,7 +49,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--output", default="submission.csv")
-    ap.add_argument("--bs-model", choices=["learned", "unet", "rules"], default=os.environ.get("BS_MODEL", "learned"))
+    ap.add_argument("--bs-model", choices=["learned", "unet", "rules"], default="rules")
     ap.add_argument("--workers", type=int, default=min(4, os.cpu_count() or 1))
     a = ap.parse_args()
 

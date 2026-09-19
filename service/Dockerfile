@@ -8,7 +8,8 @@ RUN uv sync --frozen --no-dev
 
 COPY app ./app
 COPY scripts ./scripts
-# каталог собирается заранее: uv run python scripts/ingest.py --data-dir ../train
+# Каталог из предсказаний собирается заранее:
+# uv run python scripts/ingest.py --data-dir ../train
 COPY data ./data
 
 EXPOSE 8000

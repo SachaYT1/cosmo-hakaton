@@ -22,7 +22,7 @@ def client(catalog_path) -> TestClient:
 def test_healthz(client):
     r = client.get("/healthz")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok"}
+    assert r.json() == {"status": "ready", "hotspot_count": 3, "contour_count": 3}
 
 
 def test_hotspots_bbox(client):
@@ -89,6 +89,22 @@ def test_invalid_geometry_rejected(client):
 
 def test_dates_swapped_rejected(client):
     r = client.post("/api/hotspots", json={**QUERY, "date_from": "2021-12-31", "date_to": "2021-01-01"})
+    assert r.status_code == 422
+
+
+@pytest.mark.parametrize("bbox", [
+    [60.0, 40.0, 30.0, 60.0],
+    [30.0, 60.0, 60.0, 40.0],
+    [-181.0, 40.0, 60.0, 60.0],
+    [30.0, -91.0, 60.0, 60.0],
+])
+def test_invalid_bbox_rejected(client, bbox):
+    r = client.post("/api/hotspots", json={**QUERY, "bbox": bbox})
+    assert r.status_code == 422
+
+
+def test_negative_min_area_rejected(client):
+    r = client.post("/api/burned-areas", json={**QUERY, "min_area_ha": -0.1})
     assert r.status_code == 422
 
 
