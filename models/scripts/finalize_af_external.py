@@ -47,9 +47,7 @@ def main(threads: int = 4) -> None:
             "weight": 1.0,
         }],
     }
-    config = ROOT / "configs/af_augmented_best.json"
-    config.write_text(json.dumps(runtime, indent=2) + "\n")
-    # af_baseline.json remains an immutable copy of the previous winner.
+    # Keep a single runtime configuration for the selected AF model.
     (ROOT / "configs/af.json").write_text(json.dumps(runtime, indent=2) + "\n")
     report = {
         "selected_external_weight": weight,

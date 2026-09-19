@@ -22,8 +22,16 @@ class AFPredictor:
             cfg = json.load(f)
         self.threshold = float(cfg["threshold"])
         self.inclusive = cfg.get("threshold_rule", ">") == ">="
-        members = cfg.get("models", [{"file": "weights/af_xgb.json", "feature_set": "legacy", "weight": 1.0}])
+        members = cfg.get("models", [{
+            "file": "weights/af_augmented_best_lgb.txt",
+            "kind": "lgb",
+            "feature_set": "context",
+            "weight": 1.0,
+        }])
         if weights is not None:
+            if "models" not in cfg:
+                # Backward-compatible explicit override for legacy XGBoost JSONs.
+                members = [{"kind": "xgb", "feature_set": "legacy", "weight": 1.0}]
             if len(members) != 1:
                 raise ValueError("A single weights override cannot replace an ensemble")
             members = [{**members[0], "file": str(Path(weights).resolve())}]

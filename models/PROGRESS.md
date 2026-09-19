@@ -80,7 +80,7 @@ Outputs: `reports/figures/bs_examples.png`, `reports/figures/bs_dnbr_by_landcove
   | LightGBM + NOAA weak labels (OOF) | 0.953 | — | — | — |
 
   Bootstrap 95 % intervals: day [0.946, 0.959], night [0.945, 0.972]. Separate day/night thresholds bring no gain: both come out at 0.43, and CV without leakage gives 0.952. F1 stays within 0.002 of the best for thresholds 0.25–0.50, so the operating point is stable. By satellite: SNPP 0.950, NOAA-20 0.958, NOAA-21 0.957 (only 17 chips).
-- Active output: `weights/af_augmented_best_lgb.txt`, `configs/af.json`, `reports/af_augmented_best.json`. The previous best is preserved as `weights/af_baseline_lgb_context31.txt` and `configs/af_baseline.json`.
+- Active output: `weights/af_augmented_best_lgb.txt`, `configs/af.json`, `reports/af_augmented_best.json`. Losing AF runtime weights and configs were removed after the final LightGBM/CatBoost comparison; historical metrics remain in reports.
 
 ### 5. Inference
 - `inference.py` → `firemon/pipeline.py`: parallel over chips. A chip that fails gets an empty mask instead of crashing the run. Rows follow `sample_submission.csv`, and `rle` is always quoted.
@@ -108,6 +108,6 @@ inference.py                 entry point → submission.csv
 firemon/  io.py rle.py metric.py features.py cache.py bs_rules.py af.py pipeline.py bs_unet.py
 scripts/  eda_bs.py fit_bs_rules.py train_af.py prepare_bs.py train_bs_unet.py validate_submission.py
 configs/  af.json bs_thresholds.json bs_thresholds_post.json
-weights/  af_augmented_best_lgb.txt af_baseline_lgb_context31.txt
+weights/  af_augmented_best_lgb.txt
 reports/  EDA figures and stats        outputs/  submission_rules.csv        cache/  training caches
 ```
