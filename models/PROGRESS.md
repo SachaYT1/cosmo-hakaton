@@ -7,7 +7,7 @@ Status as of 2026-09-18. All numbers are from the training data (`data/train`).
 | Module | Method | CV result | Status |
 |---|---|---|---|
 | AF (active fire) | Rule: day I4 > 330 K; night I4 > 317 K and I4 at least 3 K above the 15×15 background | F1 0.866 (fitted on all train, not CV) | done, kept as reference |
-| AF (active fire) | XGBoost on candidate pixels with local-context features | **F1 0.953** (5-fold, folds grouped by acquisition date; day 0.953 / night 0.958) | done, **used in inference** |
+| AF (active fire) | LightGBM on contextual candidates + weak NOAA history | **F1 0.953463** (3 date folds, 2019–2023) | done, **used in inference** |
 | BS (burn severity) | Rule: 3×3 median dNBR, thresholds per landcover class | **IoU_burn 0.434, mIoU_sev 0.462** (5-fold, grouped by chip = fire event) | done, **used in inference** |
 | BS (burn severity) | U-Net (burn outline + severity head) | — | code written, **not trained** |
 
@@ -20,13 +20,8 @@ python -m scripts.validate_submission outputs/submission_rules.csv     # -> VALI
 
 `--bs-model rules` is required for now. The default (`unet`) needs `configs/bs_unet.json` and trained weights, and neither exists yet.
 
-**Measured through the submission format**: `scripts/oof_submission.py` writes an out-of-fold `submission.csv` for all 644 training chips (1,092 rows, passes the validator), decodes it and scores it. The result is identical to scoring the masks directly.
-
-| F1_af | IoU_burn | mIoU_sev (sev1 / sev2 / sev3) | **Score** |
-|---|---|---|---|
-| 0.953 | 0.434 | 0.462 (0.228 / 0.479 / 0.679) | **0.624** |
-
-Output: `outputs/oof_submission_train.csv`, `reports/oof_metrics.json`.
+The metric's combined Score can't be stated honestly yet: the AF and BS numbers come from different CV setups. Plugging them into the formula as a rough guide gives
+`0.35·0.953 + 0.35·0.434 + 0.30·0.462 ≈ 0.62`.
 
 ## Step by step
 
@@ -75,17 +70,17 @@ Outputs: `reports/figures/bs_examples.png`, `reports/figures/bs_dnbr_by_landcove
 ### 4. AF module (`firemon/af.py`, `scripts/train_af.py`)
 - Features: I1–I5, I4−I5, zenith angles, day flag, the pixel's excess over its local mean and z-score in 7/15/31 px windows (for I4 and I4−I5), local-maximum features, landcover, DEM, weather, NDVI.
 - Candidate filter (I4 > 320 K, or warmer than its surroundings) keeps 99.98 % of fire pixels and about 6.5 % of all pixels.
-- XGBoost with seed 42. The decision threshold (0.42) is chosen on out-of-fold predictions. **CV F1 0.953.** Most important features: I4, I4−I5 excess over the 7×7 background.
+- LightGBM with seed 42. The decision threshold (0.44) is chosen on 2019–2023 out-of-fold predictions. **CV F1 0.953463.** Historical NOAA weak labels enter training with weight 0.02 and never enter validation. Most important features: I4 and I4−I5 excess over the local background.
 - Fixed: fold groups used Python's `hash()`, which is randomised per process, so each run had different folds (thresholds 0.36 vs 0.20). Groups are now the date string.
 - **Day vs night** (`scripts/eval_af.py` → `reports/af_daynight.json`). Night = chip median solar zenith ≥ 85°. Train is 30.2 % night chips, test 38.3 %.
 
   | | all | day | night | reweighted to test mix |
   |---|---|---|---|---|
   | Rule baseline | 0.867 | 0.897 | **0.534** (recall 0.37) | 0.855 |
-  | XGBoost (OOF) | 0.953 | 0.953 | 0.958 | 0.954 |
+  | LightGBM + NOAA weak labels (OOF) | 0.953 | — | — | — |
 
   Bootstrap 95 % intervals: day [0.946, 0.959], night [0.945, 0.972]. Separate day/night thresholds bring no gain: both come out at 0.43, and CV without leakage gives 0.952. F1 stays within 0.002 of the best for thresholds 0.25–0.50, so the operating point is stable. By satellite: SNPP 0.950, NOAA-20 0.958, NOAA-21 0.957 (only 17 chips).
-- Output: `weights/af_xgb.json`, `configs/af.json`, `cache/af_oof.npz`, `logs/train_af.log`, `logs/eval_af.log`.
+- Active output: `weights/af_augmented_best_lgb.txt`, `configs/af.json`, `reports/af_augmented_best.json`. Losing AF runtime weights and configs were removed after the final LightGBM/CatBoost comparison; historical metrics remain in reports.
 
 ### 5. Inference
 - `inference.py` → `firemon/pipeline.py`: parallel over chips. A chip that fails gets an empty mask instead of crashing the run. Rows follow `sample_submission.csv`, and `rle` is always quoted.
@@ -99,7 +94,7 @@ Outputs: `reports/figures/bs_examples.png`, `reports/figures/bs_dnbr_by_landcove
 ## Not done
 - U-Net training, tuning the burn threshold on out-of-fold predictions, `configs/bs_unet.json`.
 - Web service (deliberately untouched).
-- `README.md`, `requirements.txt` / Dockerfile, report, slides.
+- Dockerfile and slides.
 - Checking our metric against the official script.
 
 ## Caveats
@@ -113,6 +108,6 @@ inference.py                 entry point → submission.csv
 firemon/  io.py rle.py metric.py features.py cache.py bs_rules.py af.py pipeline.py bs_unet.py
 scripts/  eda_bs.py fit_bs_rules.py train_af.py prepare_bs.py train_bs_unet.py validate_submission.py
 configs/  af.json bs_thresholds.json bs_thresholds_post.json
-weights/  af_xgb.json
+weights/  af_augmented_best_lgb.txt
 reports/  EDA figures and stats        outputs/  submission_rules.csv        cache/  training caches
 ```

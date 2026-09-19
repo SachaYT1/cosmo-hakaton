@@ -47,6 +47,10 @@ def test_clipped_area_partial_cover(catalog):
     areas = clipped_area_by_severity(contours, west_half)
     assert areas[1] == pytest.approx(0.2, abs=0.02)  # половина от 0.4 га
 
+    clipped = catalog.query_contours(west_half, D0, D1)
+    assert clipped["area_ha"].sum() < contours["area_ha"].sum()
+    assert clipped.total_bounds[2] <= west_half.bounds[2] + 1e-8
+
 
 def test_build_report(catalog):
     from datetime import date
@@ -79,3 +83,8 @@ def test_meta(catalog):
     assert meta["date_max"] == "2021-07-20"
     assert meta["demo"]["fire_event_id"] == "FE00001"
     assert len(meta["demo"]["bbox"]) == 4
+
+
+def test_missing_catalog_fails_fast(tmp_path):
+    with pytest.raises(FileNotFoundError, match="catalog not found"):
+        Catalog.load(tmp_path / "missing.gpkg")

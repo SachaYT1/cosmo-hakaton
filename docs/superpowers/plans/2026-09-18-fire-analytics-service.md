@@ -15,7 +15,7 @@
 - AOI: `fire-aoi/fire_monitoring_aoi.geojson`, 3 фичи, у границы мониторинга `feature.id == "aoi"`.
 - RLE (постановка): пиксели нумеруются построчно слева направо, сверху вниз, **с 1**; пары «старт длина» через пробел.
 
-**Working directory:** все команды выполняются из `service/` (создаётся в Task 1). Корень репо: `/Users/algavkovskii/programming/cosmo-hakaton`.
+**Working directory:** все команды выполняются из `service/`; пути к данным задаются относительно корня репозитория.
 
 ---
 

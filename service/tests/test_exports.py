@@ -23,6 +23,8 @@ def test_export_geojson(client):
     fc = json.loads(r.content)
     assert fc["type"] == "FeatureCollection"
     assert len(fc["features"]) >= 3
+    props = fc["features"][0]["properties"]
+    assert {"contour_id", "severity", "area_ha"} <= set(props)
 
 
 def test_export_geojson_empty_selection(client):

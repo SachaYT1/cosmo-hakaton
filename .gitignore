@@ -3,6 +3,8 @@ train/
 test/
 data/
 *.pdf
+*.zip
+*.tar
 
 # Python
 __pycache__/
@@ -20,4 +22,5 @@ __pycache__/
 
 # Temp
 temp/
+tmp/
 outputs/

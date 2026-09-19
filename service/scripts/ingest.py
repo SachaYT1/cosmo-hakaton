@@ -2,7 +2,7 @@
 
 Примеры:
     uv run python scripts/ingest.py --data-dir ../train
-    uv run python scripts/ingest.py --data-dir ../train --source predictions --submission preds.csv
+    uv run python scripts/ingest.py --data-dir ../train --source gt
 """
 
 import argparse
@@ -17,8 +17,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build service catalog (GeoPackage)")
     parser.add_argument("--data-dir", type=Path, default=Path("../train"),
                         help="каталог с af/ и bs/ (структура train/)")
-    parser.add_argument("--source", choices=["gt", "predictions"], default="gt")
-    parser.add_argument("--submission", type=Path, default=None,
+    parser.add_argument("--source", choices=["gt", "predictions"], default="predictions")
+    parser.add_argument("--submission", type=Path, default=Path("preds_train.csv"),
                         help="submission.csv с RLE-предсказаниями (для --source predictions)")
     parser.add_argument("--output", type=Path, default=Path("data/catalog.gpkg"))
     args = parser.parse_args()

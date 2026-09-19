@@ -15,13 +15,25 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .bs_rules import Thresholds, invalid_mask, smooth_dnbr
+from .bs_rules import Thresholds, invalid_mask, remove_small, smooth_dnbr
 from .features import nbr, ndvi
 from .io import BSChip
 
 ROOT = Path(__file__).resolve().parent.parent
 LC_CODES = (10, 20, 30, 40, 50, 60, 80, 90)
 N_CHANNELS = 18 + 5 + 6 + 2 + len(LC_CODES) + 3
+
+# Channel layout of bs_input(). The final model deliberately excludes Sentinel-1:
+# the five-fold ablation showed a small but statistically significant degradation.
+CHANNEL_GROUPS = {
+    "s2": list(range(0, 23)) + [39, 40, 41],
+    "s1": list(range(23, 29)),
+    "aux": list(range(29, 39)),
+}
+
+
+def channel_index(groups: list[str]) -> list[int]:
+    return sorted(i for group in groups for i in CHANNEL_GROUPS[group])
 
 
 def bs_input(chip: BSChip) -> np.ndarray:
@@ -75,7 +87,11 @@ class UNet(nn.Module):
 def decode_output(logits: np.ndarray, med: np.ndarray, lc: np.ndarray, invalid: np.ndarray,
                   cfg: dict, th: Thresholds | None) -> np.ndarray:
     """logits (4,H,W) -> mask 0..3."""
-    burn = (1 / (1 + np.exp(-logits[0])) > cfg["burn_threshold"]) & ~invalid
+    burn = 1 / (1 + np.exp(-logits[0])) > cfg["burn_threshold"]
+    if cfg.get("mask_invalid", True):
+        burn &= ~invalid
+    if cfg.get("min_size"):
+        burn = remove_small(burn, cfg["min_size"])
     if cfg.get("min_dnbr") is not None:
         burn &= med >= cfg["min_dnbr"]
     if cfg["severity"] == "rule" and th is not None:
@@ -90,16 +106,17 @@ class BSUNetPredictor:
         self.cfg = json.load(open(config))
         torch.set_num_threads(max(1, torch.get_num_threads()))
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.channels = channel_index(self.cfg.get("channels", ["s2", "s1", "aux"]))
         self.models = []
         for name in self.cfg["weights"]:
-            m = UNet(base=self.cfg.get("base", 32))
+            m = UNet(cin=len(self.channels), base=self.cfg.get("base", 16))
             m.load_state_dict(torch.load(weights_dir / name, map_location="cpu", weights_only=True))
             self.models.append(m.eval().to(self.device))
         self.th = Thresholds.load(ROOT / "configs" / "bs_thresholds.json")
 
     @torch.no_grad()
     def logits(self, chip: BSChip) -> np.ndarray:
-        x = torch.from_numpy(bs_input(chip))[None].to(self.device)
+        x = torch.from_numpy(bs_input(chip)[self.channels])[None].to(self.device)
         out = 0
         for m in self.models:
             out = out + m(x)

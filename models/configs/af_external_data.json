@@ -1,0 +1,39 @@
+{
+  "policy_version": "winter-2019-2025-outside-eurasia-v1",
+  "case_test_scope": {
+    "years": [2019, 2020, 2021, 2022, 2023, 2024, 2025],
+    "months": [4, 5, 6, 7, 8, 9, 10],
+    "region": "southern and southwestern Russia"
+  },
+  "allowed_observation_months": [11, 12, 1, 2, 3],
+  "allowed_regions": {
+    "australia": [-45.0, -10.0, 112.0, 155.0],
+    "conus": [24.0, 50.0, -125.0, -66.0],
+    "southern_africa": [-35.0, -10.0, 10.0, 40.0],
+    "south_america": [-55.0, 12.0, -82.0, -34.0]
+  },
+  "training": {
+    "external_weight": 0.02,
+    "validation_contains_external_data": false,
+    "unknown_mask_value": 255,
+    "previous_baseline_preserved": true,
+    "active_config_promoted_after_oof_gain": true
+  },
+  "sources": [
+    {
+      "name": "NOAA JPSS NODD VIIRS SDR and Active Fire I-band EDR",
+      "url": "https://registry.opendata.aws/noaa-jpss/",
+      "access": "public, no authentication",
+      "license": "NOAA NODD data are open to the public; attribution requested",
+      "use": "optional weak supervision after date and full-tile region checks"
+    },
+    {
+      "name": "USDA Forest Service Active Fire Mapping VIIRS CONUS",
+      "url": "https://fsapps.nwcg.gov/afm/data_viirs/fireptdata/viirsfire_2017_conus.htm",
+      "access": "public, no authentication, no fee",
+      "license": "access constraints none; attribution appreciated",
+      "use": "historical detection index only; not a natural-fire target mask"
+    }
+  ],
+  "external_pretrained_models": []
+}

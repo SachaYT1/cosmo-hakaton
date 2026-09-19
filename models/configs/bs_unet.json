@@ -1,0 +1,11 @@
+{
+  "weights": ["bs_unet_s2_aux_full.pt"],
+  "channels": ["s2", "aux"],
+  "base": 16,
+  "tta": false,
+  "burn_threshold": 0.45,
+  "min_size": 50,
+  "min_dnbr": 0.06,
+  "severity": "rule",
+  "mask_invalid": true
+}

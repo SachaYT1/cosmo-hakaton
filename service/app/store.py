@@ -18,11 +18,35 @@ CONTOUR_SCHEMA = [
 
 
 def _read_layer(path: Path, layer: str, columns: list[str]) -> gpd.GeoDataFrame:
-    try:
-        return gpd.read_file(path, layer=layer)
-    except Exception:
-        logger.warning("layer %r not found in %s — using empty layer", layer, path)
-        return gpd.GeoDataFrame({c: [] for c in columns}, geometry=[], crs=CRS_WGS84)
+    gdf = gpd.read_file(path, layer=layer)
+    missing = set(columns) - set(gdf.columns)
+    if missing:
+        raise ValueError(f"layer {layer!r} misses columns: {sorted(missing)}")
+    if gdf.crs is None:
+        raise ValueError(f"layer {layer!r} has no CRS")
+    return gdf.to_crs(CRS_WGS84)
+
+
+def clip_contours(contours: gpd.GeoDataFrame, query_geom: BaseGeometry) -> gpd.GeoDataFrame:
+    """Clip contours in each chip's native UTM CRS and recalculate returned area."""
+    if contours.empty:
+        return contours.copy()
+    query = gpd.GeoSeries([query_geom], crs=CRS_WGS84)
+    parts = []
+    for epsg, group in contours.groupby("epsg", sort=False):
+        target_crs = f"EPSG:{int(float(epsg))}"
+        projected = group.to_crs(target_crs).copy()
+        projected.geometry = projected.geometry.intersection(query.to_crs(target_crs).iloc[0])
+        projected = projected[~projected.geometry.is_empty & (projected.geometry.area > 0)].copy()
+        if projected.empty:
+            continue
+        projected["area_ha"] = (projected.geometry.area / 10_000.0).round(6)
+        parts.append(projected.to_crs(CRS_WGS84))
+    if not parts:
+        return contours.iloc[0:0].copy()
+    return gpd.GeoDataFrame(
+        pd.concat(parts, ignore_index=True), geometry="geometry", crs=CRS_WGS84
+    )
 
 
 class Catalog:
@@ -40,6 +64,8 @@ class Catalog:
 
     @classmethod
     def load(cls, path: Path) -> "Catalog":
+        if not path.is_file():
+            raise FileNotFoundError(f"catalog not found: {path}")
         hotspots = _read_layer(path, "hotspots", HOTSPOT_SCHEMA)
         contours = _read_layer(path, "burn_contours", CONTOUR_SCHEMA)
         logger.info("catalog loaded: %d hotspots, %d contours", len(hotspots), len(contours))
@@ -49,8 +75,9 @@ class Catalog:
         return self._query(self.hotspots, "_date", geom, date_from, date_to)
 
     def query_contours(self, geom: BaseGeometry, date_from: pd.Timestamp, date_to: pd.Timestamp) -> gpd.GeoDataFrame:
-        """Контур попадает в выборку, если его date_post лежит в интервале."""
-        return self._query(self.contours, "_post_date", geom, date_from, date_to)
+        """Select by date/intersection, then clip geometry in its native UTM CRS."""
+        selected = self._query(self.contours, "_post_date", geom, date_from, date_to)
+        return clip_contours(selected, geom)
 
     @staticmethod
     def _query(gdf: gpd.GeoDataFrame, date_col: str, geom, date_from, date_to) -> gpd.GeoDataFrame:

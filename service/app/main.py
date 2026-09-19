@@ -2,6 +2,7 @@
 
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -18,11 +19,21 @@ DEFAULT_CATALOG = Path(__file__).resolve().parent.parent / "data" / "catalog.gpk
 
 def create_app(catalog_path: Path | None = None) -> FastAPI:
     path = Path(catalog_path or os.environ.get("CATALOG_PATH", DEFAULT_CATALOG))
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if app.state.catalog is None:
+            app.state.catalog = Catalog.load(path)
+        yield
+
     app = FastAPI(
         title="Мониторинг природных пожаров — информационно-аналитический сервис",
         version="0.1.0",
+        lifespan=lifespan,
     )
-    app.state.catalog = Catalog.load(path)
+    # Explicit paths are loaded immediately for tests and programmatic use.
+    # The default uvicorn app loads at startup and fails fast on a missing/broken catalog.
+    app.state.catalog = Catalog.load(path) if catalog_path is not None else None
     app.include_router(router)
     app.add_api_route("/healthz", healthz, methods=["GET"])
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
