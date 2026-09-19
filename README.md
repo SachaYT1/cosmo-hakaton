@@ -7,13 +7,13 @@
 
 | F1_af | IoU_burn | mIoU_sev (1 / 2 / 3) | **Score** |
 |---|---|---|---|
-| 0.953 | 0.434 | 0.462 (0.228 / 0.479 / 0.679) | **0.624** |
+| 0.953 | 0.578 | 0.604 (0.411 / 0.619 / 0.783) | **0.717** |
 
 ## Структура репозитория
 
 ```
 models/     Модули 1–2: детекция активного горения (LightGBM) и картирование гарей
-            (пороговая модель dNBR по типам покрова). inference.py, обучение, веса,
+            (U-Net S2+aux для контура, dNBR по типам покрова для степени). Код, веса,
             EDA-отчёты. Подробности: models/PROGRESS.md
 service/    Информационно-аналитический сервис: REST API + веб-карта (FastAPI + Leaflet).
             Подробности: service/README.md
@@ -39,8 +39,9 @@ test/
 
 ### Инференс (submission.csv)
 
-Проверенное окружение — Python 3.12. Финальный AF-вес
-`models/weights/af_augmented_best_lgb.txt` и BS-пороги уже находятся в репозитории;
+Проверенное окружение — Python 3.12. Финальные AF- и BS-веса
+`models/weights/af_augmented_best_lgb.txt` и `models/weights/bs_unet_s2_aux_full.pt`
+уже находятся в репозитории;
 дополнительное скачивание весов не требуется.
 
 ```bash
@@ -54,10 +55,9 @@ python -m scripts.validate_submission submission.csv --data-dir ../test    # -> 
 ```
 
 Ожидаемый результат — `submission.csv` с 447 строками и сообщение `VALID`.
-Тестовый набор (180 AF + 89 BS чипов) обработан за 11,1 секунды на Apple Silicon CPU.
-Два последовательных запуска дали побайтово одинаковые файлы с SHA-256
-`d7c7008c0330956b659986f247881abd58bbb76a3690b9aacb811e14fec1567f`.
-На macOS при проблемах с пулом процессов добавьте `--workers 1`.
+По умолчанию используется финальная U-Net (`--bs-model unet`); `--bs-model rules`
+оставлен только для воспроизведения baseline. На macOS U-Net выполняется в одном
+процессе, а PyTorch самостоятельно распараллеливает вычисления.
 
 ### Информационно-аналитический сервис
 
@@ -91,7 +91,6 @@ source .venv/bin/activate
 python -m scripts.prepare_af_external --download
 python -m scripts.train_af --data-dir ../train --folds 3 --threads 6 \
     --external-dir data/external/noaa_af_chips --external-weight 0.02
-python -m scripts.fit_bs_rules --data-dir ../train --folds 5
 python -m unittest discover -s tests -v
 ```
 
@@ -102,7 +101,8 @@ python -m unittest discover -s tests -v
 детерминированы при одинаковом окружении и входных данных.
 
 Случайные начальные значения зафиксированы (seed 42), разбиения фолдов
-детерминированы (AF — по дате съёмки, BS — по чипу/пожару).
+детерминированы (AF — по дате съёмки, BS — по чипу/пожару). Результаты абляции
+Модуля 2 сохранены в `models/reports/bs_ablation.json`.
 
 ## Лицензии и данные
 

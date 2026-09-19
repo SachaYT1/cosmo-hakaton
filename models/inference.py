@@ -26,11 +26,10 @@ def _init(bs_model: str) -> None:
     if bs_model == "unet":
         from firemon.bs_unet import BSUNetPredictor
         _PRED["bs"] = BSUNetPredictor()
-    elif bs_model == "learned":
-        from firemon.bs_model import BSPredictor
-        _PRED["bs"] = BSPredictor()
-    else:
+    elif bs_model == "rules":
         _PRED["bs"] = BSRulePredictor()
+    else:
+        raise ValueError(f"Unknown BS model: {bs_model}")
 
 
 def _predict(args: tuple[str, str]) -> list[tuple[str, int, str]]:
@@ -49,7 +48,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", required=True)
     ap.add_argument("--output", default="submission.csv")
-    ap.add_argument("--bs-model", choices=["learned", "unet", "rules"], default="rules")
+    ap.add_argument("--bs-model", choices=["unet", "rules"], default="unet")
     ap.add_argument("--workers", type=int, default=min(4, os.cpu_count() or 1))
     a = ap.parse_args()
 
@@ -57,10 +56,18 @@ def main() -> None:
     root = Path(a.data_dir)
     template = pd.read_csv(root / "sample_submission.csv", keep_default_na=False)
     chips = list(dict.fromkeys(template.chip_id))
-    if a.bs_model == "unet" or a.workers <= 1:
-        # torch parallelises internally; keep a single process
+    if a.workers <= 1:
         _init(a.bs_model)
         rows = [r for c in chips for r in _predict((str(root), c))]
+    elif a.bs_model == "unet":
+        # Keep the CPU-heavy AF feature extraction parallel. Run the Torch BS model
+        # once in the parent process so workers do not duplicate its weights/memory.
+        af_chips = [c for c in chips if c.startswith("AF")]
+        bs_chips = [c for c in chips if not c.startswith("AF")]
+        with ProcessPoolExecutor(a.workers, initializer=_init, initargs=("rules",)) as ex:
+            rows = [r for res in ex.map(_predict, [(str(root), c) for c in af_chips], chunksize=4) for r in res]
+        _init("unet")
+        rows.extend(r for c in bs_chips for r in _predict((str(root), c)))
     else:
         with ProcessPoolExecutor(a.workers, initializer=_init, initargs=(a.bs_model,)) as ex:
             rows = [r for res in ex.map(_predict, [(str(root), c) for c in chips], chunksize=4) for r in res]
