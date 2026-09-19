@@ -25,6 +25,7 @@ from firemon.af import candidates, extract_features, feature_names, rule_predict
 from firemon import af_models
 from firemon.af_eval import counts, date_folds, metrics, tune_threshold
 from firemon.io import VIIRS_BANDS, list_chips, load_af
+from firemon.external_af import validate_chip
 
 ROOT = Path(__file__).resolve().parents[1]
 SEED = 42
@@ -68,13 +69,11 @@ def build_external(root: str, feature_set: str):
     """Load only approved weak labels; 255 is unknown and never becomes a target."""
     root_path = Path(root)
     manifest = json.loads((root_path / "manifest.json").read_text())
-    if manifest.get("observation_date") != "2022-12-15" or manifest.get("region") != "Australia":
-        raise ValueError("External source is outside the approved date/region")
+    if manifest.get("policy") != "winter-2019-2025-outside-eurasia-v1":
+        raise ValueError("External source lacks the approved leakage policy")
     X, y = [], []
     for item in manifest["chips"]:
-        if not (-45 <= item["lat_min"] <= item["lat_max"] <= -10 and
-                112 <= item["lon_min"] <= item["lon_max"] <= 155):
-            raise ValueError(f"External chip outside Australia: {item['chip_id']}")
+        validate_chip(item)
         chip = load_af(root_path, item["chip_id"])
         if chip.mask is None or chip.mask.shape != (256, 256):
             raise ValueError(f"Missing external mask: {item['chip_id']}")
@@ -130,7 +129,7 @@ def cross_validate(X, y, chip, dates, selected, members, folds, threads,
 def main(root: str, folds: int = 5, threads: int = 6,
          train_config: str | None = None, validate_year: int | None = None,
          validation_folds: int = 3, external_dir: str | None = None,
-         external_weight: float = 0.1) -> None:
+         external_weight: float = 0.02) -> None:
     tic = time.monotonic()
     config_path = Path(train_config) if train_config else ROOT/"configs/af_train.json"
     spec = json.loads(config_path.read_text()) if config_path.exists() else {
@@ -243,7 +242,7 @@ if __name__ == "__main__":
     ap.add_argument("--validate-year", type=int, help="Optional temporal holdout; train only on earlier years")
     ap.add_argument("--validation-folds", type=int, default=3, help="Earlier-year calibration folds for the temporal holdout")
     ap.add_argument("--external-dir", help="Approved AF chips with weak labels and provenance manifest")
-    ap.add_argument("--external-weight", type=float, default=0.1)
+    ap.add_argument("--external-weight", type=float, default=0.02)
     a = ap.parse_args()
     if a.threads < 1:
         ap.error("--threads must be positive")

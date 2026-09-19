@@ -1,0 +1,119 @@
+{
+  "dates": [
+    "2022-12-10",
+    "2022-12-15",
+    "2022-12-20",
+    "2022-12-25",
+    "2022-12-30",
+    "2023-01-05",
+    "2023-01-10",
+    "2023-01-15",
+    "2023-01-20",
+    "2023-01-25",
+    "2023-02-01",
+    "2023-02-08",
+    "2023-02-15",
+    "2023-02-22"
+  ],
+  "scan_stride": 12,
+  "min_detections": 10,
+  "downloaded": [
+    {
+      "date": "2023-02-08",
+      "key": "VIIRS-AF-Iband-EDR/2023/02/08/AF-Iband_v1r1_npp_s202302080508192_e202302080509434_c202302080619139.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 0,
+        "southern_africa": 0,
+        "south_america": 1239
+      },
+      "industrial": 2,
+      "score": 1279
+    },
+    {
+      "date": "2022-12-20",
+      "key": "VIIRS-AF-Iband-EDR/2022/12/20/AF-Iband_v1r1_npp_s202212201631176_e202212201632418_c202212201720295.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 0,
+        "southern_africa": 0,
+        "south_america": 527
+      },
+      "industrial": 0,
+      "score": 527
+    },
+    {
+      "date": "2022-12-30",
+      "key": "VIIRS-AF-Iband-EDR/2022/12/30/AF-Iband_v1r1_npp_s202212301830440_e202212301832081_c202212301916075.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 0,
+        "southern_africa": 0,
+        "south_america": 287
+      },
+      "industrial": 4,
+      "score": 367
+    },
+    {
+      "date": "2023-02-08",
+      "key": "VIIRS-AF-Iband-EDR/2023/02/08/AF-Iband_v1r1_npp_s202302081739246_e202302081740488_c202302081819575.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 0,
+        "southern_africa": 0,
+        "south_america": 318
+      },
+      "industrial": 2,
+      "score": 358
+    },
+    {
+      "date": "2022-12-25",
+      "key": "VIIRS-AF-Iband-EDR/2022/12/25/AF-Iband_v1r1_npp_s202212252012289_e202212252013531_c202212252053200.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 28,
+        "southern_africa": 0,
+        "south_america": 0
+      },
+      "industrial": 5,
+      "score": 128
+    },
+    {
+      "date": "2023-02-08",
+      "key": "VIIRS-AF-Iband-EDR/2023/02/08/AF-Iband_v1r1_npp_s202302080400034_e202302080401275_c202302080446239.nc",
+      "counts": {
+        "australia": 87,
+        "conus": 0,
+        "southern_africa": 0,
+        "south_america": 0
+      },
+      "industrial": 0,
+      "score": 87
+    },
+    {
+      "date": "2022-12-20",
+      "key": "VIIRS-AF-Iband-EDR/2022/12/20/AF-Iband_v1r1_npp_s202212201306264_e202212201307506_c202212201354073.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 0,
+        "southern_africa": 76,
+        "south_america": 0
+      },
+      "industrial": 0,
+      "score": 76
+    },
+    {
+      "date": "2023-02-15",
+      "key": "VIIRS-AF-Iband-EDR/2023/02/15/AF-Iband_v1r1_npp_s202302150741474_e202302150743115_c202302150907089.nc",
+      "counts": {
+        "australia": 0,
+        "conus": 15,
+        "southern_africa": 0,
+        "south_america": 0
+      },
+      "industrial": 3,
+      "score": 75
+    }
+  ],
+  "bytes": 1781103764
+}

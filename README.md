@@ -12,7 +12,7 @@
 ## Структура репозитория
 
 ```
-models/     Модули 1–2: детекция активного горения (XGBoost) и картирование гарей
+models/     Модули 1–2: детекция активного горения (LightGBM) и картирование гарей
             (пороговая модель dNBR по типам покрова). inference.py, обучение, веса,
             EDA-отчёты. Подробности: models/PROGRESS.md
 service/    Информационно-аналитический сервис: REST API + веб-карта (FastAPI + Leaflet).
@@ -31,7 +31,7 @@ REPORT.md   Отчёт по решению
 
 ```bash
 cd models
-pip install -r requirements.txt        # macOS дополнительно: brew install libomp
+pip install -r requirements-af.txt     # macOS дополнительно: brew install libomp
 python inference.py --data-dir ../test --output submission.csv --bs-model rules
 python -m scripts.validate_submission submission.csv    # -> VALID
 ```
@@ -63,9 +63,9 @@ CATALOG_PATH=data/catalog_pred.gpkg uv run uvicorn app.main:app --port 8001
 
 ```bash
 cd models
-python -m scripts.train_af             # AF: XGBoost, 5-fold по датам съёмки -> weights/af_xgb.json
+python -m scripts.train_af --data-dir /path/to/train --external-dir data/external/noaa_af_chips
 python -m scripts.fit_bs_rules         # BS: пороги dNBR по покрову -> configs/bs_thresholds.json
-python -m scripts.oof_submission       # OOF-предсказания train + метрики
+python -m unittest discover -s tests -v
 ```
 
 Случайные начальные значения зафиксированы (seed 42), разбиения фолдов
@@ -75,5 +75,7 @@ python -m scripts.oof_submission       # OOF-предсказания train + м
 
 - Copernicus Sentinel-1/2, Copernicus DEM — открытая лицензия Copernicus.
 - VIIRS (NASA/NOAA) — общественное достояние; ESA WorldCover — CC BY 4.0.
-- Внешние готовые продукты активного горения и выгоревших площадей **не использовались**.
-- Библиотеки: FastAPI, geopandas, rasterio, shapely, XGBoost, OpenCV, Leaflet (все open source).
+- Для слабого дообучения AF использованы исторические NOAA VIIRS SDR/AF EDR за зимние
+  даты вне тестовой территории; они не входят в валидацию. Источники и лицензии:
+  `models/configs/af_external_data.json`.
+- Библиотеки: FastAPI, geopandas, rasterio, shapely, LightGBM, XGBoost, OpenCV, Leaflet.

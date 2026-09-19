@@ -5,11 +5,11 @@
 
 ## Запуск
 
-Команды выполняются из `egor_dev/cosmo-hack`, Python 3.12.
+Команды выполняются из `cosmo-hakaton/models`, Python 3.12.
 
 ```bash
 python -m pip install -r requirements-af.txt
-python -m scripts.train_af --data-dir ../../train --threads 6
+python -m scripts.train_af --data-dir ../../../../train --threads 6
 python inference.py --data-dir /path/to/test --output outputs/submission.csv
 python -m scripts.validate_submission outputs/submission.csv --data-dir /path/to/test
 python -m unittest discover -s tests -v
@@ -19,11 +19,13 @@ python -m unittest discover -s tests -v
 `configs/af.json`; для BS по умолчанию включены уже обученные правила. BS U-Net
 можно включить через `--bs-model unet`, когда появятся её конфигурация и веса.
 
-Выбранный бейзлайн использует LightGBM, 100 контекстных признаков и порог
-0.56. На трёх фолдах по датам 2019–2023 получено `F1_af=0.952759` после
+Активная модель использует LightGBM, 100 контекстных признаков и порог
+0.44. На трёх фолдах по датам 2019–2023 получено `F1_af=0.953463` после
 подбора порога по OOF; 2024 год не участвовал в выборе. Это оценка на
 обучающей части, а не результат скрытого теста. Рабочие файлы:
-`configs/af.json` и `weights/af_baseline_lgb_context31.txt`.
+`configs/af.json` и `weights/af_augmented_best_lgb.txt`. Предыдущий бейзлайн
+`F1_af=0.952759` сохранён в `configs/af_baseline.json` и
+`weights/af_baseline_lgb_context31.txt`.
 
 Повторное обучение сохраняет веса в `weights/`, рабочий порог и состав моделей в
 `configs/af_candidate.json`, OOF в `cache/af_candidate_oof.npz`, метрики
@@ -42,8 +44,8 @@ python -m unittest discover -s tests -v
 не входит в формулу F1.
 
 Стандартное повторное обучение использует пять фолдов: все чипы одной даты
-находятся в одном фолде. Выбранный бейзлайн проверялся на трёх фолдах
-2019–2023 годов; протокол записан в `reports/af_baseline.json`.
+находятся в одном фолде. Активная модель выбиралась на трёх фолдах
+2019–2023 годов; протокол записан в `reports/af_augmented_best.json`.
 Порог выбирается по объединённым out-of-fold предсказаниям на сетке 0.05–0.95
 с шагом 0.01. Бинаризация в обучении, инференсе и визуализации одинакова: `p >= t`.
 OOF F1 с выбранным на тех же данных порогом — оценка с подбором порога, а не
@@ -52,7 +54,7 @@ OOF F1 с выбранным на тех же данных порогом — о
 Для временной проверки, где порог не подбирается на проверочном году:
 
 ```bash
-python -m scripts.train_af --data-dir ../../train --threads 6 \
+python -m scripts.train_af --data-dir ../../../../train --threads 6 \
   --validate-year 2024 --validation-folds 3
 ```
 
@@ -93,9 +95,9 @@ python -m scripts.train_af --data-dir ../../train --threads 6 \
 отложенного последнего года. LightGBM 4.6.0 включён в `requirements-af.txt`.
 
 ```bash
-python -m scripts.benchmark_af --data-dir ../../train --seconds 1800
+python -m scripts.benchmark_af --data-dir ../../../../train --seconds 1800
 # Повторить один вариант:
-python -m scripts.benchmark_af --data-dir ../../train --trial baseline --seconds 300
+python -m scripts.benchmark_af --data-dir ../../../../train --trial baseline --seconds 300
 ```
 
 Ограничение времени принудительно останавливает процесс, включая нативное
@@ -123,19 +125,43 @@ VIIRS I1–I5 SDR, геопривязка и NOAA AF I-band EDR. Гранула 
 детекцию NOAA с номинальной/высокой уверенностью, кроме помеченных
 постоянных аномалий; чистая суша и указанные промышленные категории получают
 класс 0. Это **слабая разметка**, не эталон природных пожаров. Каналы AUX,
-которых нет в комплекте NOAA, заполнены NaN. По умолчанию внешние чипы не
-участвуют в обучении и оценке.
+DEM заполняется из канала `Height` геопривязки GITCO. Landcover и погодные
+каналы, которых нет в комплекте NOAA, остаются NaN и обрабатываются моделью
+как пропуски. По умолчанию внешние чипы не участвуют в обучении и оценке.
 
 Для обучения с внешними чипами:
 
 ```bash
-python -m scripts.train_af --data-dir ../../train --threads 4 --folds 3 \
-  --external-dir data/external/noaa_af_chips --external-weight 0.1
+python -m scripts.train_af --data-dir ../../../../train --threads 4 --folds 3 \
+  --external-dir data/external/noaa_af_chips --external-weight 0.02
 ```
 
-Внешние примеры входят только в обучение каждого фолда и имеют вес 0.1;
+Внешние примеры входят только в обучение каждого фолда и имеют вес 0.02;
 проверочные фолды содержат только чипы организаторов. Результаты сохраняются
 отдельно как `configs/af_augmented.json`, `reports/af_augmented_training.json`
-и `cache/af_augmented_oof.npz`. Бейзлайн остаётся активным до независимой
-проверки нового варианта. Участки и даты из тестового сезона и региона не
+и `cache/af_augmented_oof.npz`. После проверки тем же OOF-протоколом лучший
+вариант перенесён в `configs/af.json`, а предыдущий бейзлайн сохранён в
+`configs/af_baseline.json`. Участки и даты из тестового сезона и региона не
 используются; координаты и даты внешних примеров не подаются модели.
+
+Полная подготовка и аудит выполняются одной командой из `models/`:
+
+```bash
+python -m scripts.prepare_af_external --download
+```
+
+Если исходные файлы уже скачаны, флаг `--download` можно убрать. Итоговый
+машиночитаемый отчёт создаётся в `reports/af_external_data.json`.
+
+Для расширения набора скрипт сначала просматривает компактные маски AF EDR и
+только затем скачивает тяжёлые I1–I5 и GEO для наиболее полезных гранул:
+
+```bash
+python -m scripts.discover_af_noaa --max-granules 24 --max-gb 8
+python -m scripts.prepare_af_external
+```
+
+По умолчанию проверяются выбранные даты с декабря 2022 по февраль 2023 года.
+Каждая дата проходит тот же запрет апреля–октября, а каждый готовый чип должен
+целиком попасть в один из удалённых разрешённых регионов. Ограничения объёма,
+число гранул, минимальное число детекций и шаг просмотра задаются аргументами.

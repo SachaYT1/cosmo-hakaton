@@ -1,0 +1,30 @@
+{
+  "selected_external_weight": 0.02,
+  "selection": {
+    "external_weight": 0.02,
+    "threshold": 0.44,
+    "oof": {
+      "TP": 6966,
+      "FP": 379,
+      "FN": 301,
+      "F1_af": 0.953462907199562,
+      "precision": 0.9484002722940776,
+      "recall": 0.9585798816568047
+    },
+    "oof_at_0.5": {
+      "TP": 6941,
+      "FP": 369,
+      "FN": 326,
+      "F1_af": 0.9523221513342938,
+      "precision": 0.9495212038303693,
+      "recall": 0.9551396724920875
+    }
+  },
+  "organizer_candidate_pixels": 1789574,
+  "external_candidate_pixels": 813501,
+  "external_positive_pixels": 2441,
+  "weights": "weights/af_augmented_best_lgb.txt",
+  "sha256": "34b79eac8578d9c1d08e8380281f4d682f5d81994db0ed037c3ff7e3de257a32",
+  "previous_baseline_cv_f1": 0.9527591400794194,
+  "external_source_report": "reports/af_external_data.json"
+}

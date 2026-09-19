@@ -10,6 +10,7 @@ import xgboost as xgb
 
 from firemon.af import candidates, extract_features, feature_names
 from firemon.af_eval import counts, date_folds, metrics, tune_threshold
+from firemon.af_models import probability, save
 from firemon.io import AFChip
 from firemon.metric import Accumulator
 from firemon.pipeline import AFPredictor
@@ -99,7 +100,7 @@ class AFTests(unittest.TestCase):
                 X = rng.normal(size=(64, nf)).astype(np.float32)
                 y = X[:, 0] > 0
                 model = xgb.XGBClassifier(n_estimators=2, max_depth=2, n_jobs=1).fit(X, y)
-                path = Path(tmp)/f"model{i}.json"; model.save_model(path)
+                path = Path(tmp)/f"model{i}.json"; save(model, "xgb", path)
                 members.append({"file": str(path), "feature_set": feature_set, "weight": i+1})
                 direct += (i+1)/3 * model.predict_proba(f[cand, :nf])[:, 1]
             cfg = Path(tmp)/"af.json"
@@ -111,7 +112,7 @@ class AFTests(unittest.TestCase):
             # The old one-model JSON and explicit weights argument still work.
             cfg.write_text(json.dumps({"threshold": 0.5}))
             old = AFPredictor(weights=Path(members[0]["file"]), config=cfg)
-            old_expected = old.model.predict_proba(f[cand, :len(feature_names())])[:, 1] > 0.5
+            old_expected = probability(old.model, f[cand, :len(feature_names())]) > 0.5
             np.testing.assert_array_equal(old(c)[cand], old_expected)
 
 

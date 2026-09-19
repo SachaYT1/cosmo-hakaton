@@ -16,9 +16,9 @@ def create(kind: str, params: dict):
 
 def load(kind: str, path):
     if kind == "xgb":
-        model = create(kind, {"n_jobs": 1})
+        from xgboost import Booster
+        model = Booster(params={"nthread": 1})
         model.load_model(str(path))
-        model.set_params(n_jobs=1)
         return model
     if kind == "lgb":
         from lightgbm import Booster
@@ -27,18 +27,27 @@ def load(kind: str, path):
 
 
 def feature_count(model) -> int:
-    return model.n_features_in_ if hasattr(model, "n_features_in_") else model.num_feature()
+    if hasattr(model, "n_features_in_"):
+        return model.n_features_in_
+    if hasattr(model, "num_feature"):
+        return model.num_feature()
+    return model.num_features()
 
 
 def probability(model, X) -> np.ndarray:
     if hasattr(model, "predict_proba"):
         return model.predict_proba(X)[:, 1]
+    if hasattr(model, "inplace_predict"):
+        return model.inplace_predict(X)
     return model.predict(X, num_threads=1)
 
 
 def save(model, kind: str, path) -> None:
     if kind == "xgb":
-        model.save_model(path)
+        # XGBoost 2.1 combined with recent scikit-learn cannot always infer
+        # `_estimator_type` in XGBClassifier.save_model. The native Booster
+        # artifact is the same inference model and works across both 2.x/3.x.
+        model.get_booster().save_model(str(path))
     else:
         model.booster_.save_model(str(path))
 
